@@ -1,0 +1,9 @@
+LLM_Config:
+  Deepseek:
+    base_config:
+      model: "deepseek-v4-pro"
+      base_url: "https://api.deepseek.com"
+    stream: True
+    thinking:
+      type: "enabled"
+    reasoning_effort: "max"
