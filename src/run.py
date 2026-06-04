@@ -2,6 +2,8 @@ import asyncio
 import os
 import sys
 
+from src.memory import FileMemory
+
 _SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.dirname(_SRC_DIR)
 if _PROJECT_ROOT not in sys.path:
@@ -37,6 +39,7 @@ async def main() -> None:
         ),
         model=model,
         formatter=OpenAIFormatter(),
+        memory=FileMemory(),
         toolkit=toolkit,
         max_iters=10,
     )

@@ -60,5 +60,5 @@ _env_vars = _read_env()
 
 llm_config = DeepseekModel(
     **app_config.LLM_Config["Deepseek"],
-    api_key=_env_vars.get("api_key", app_config.LLM_Config["Deepseek"].get("api_key", "")),
+    api_key=_env_vars.get("DEEPSEEK_API", app_config.LLM_Config["Deepseek"].get("DEEPSEEK_API", "")),
 )

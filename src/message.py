@@ -32,6 +32,8 @@ class ToolResultBlock(TypedDict):
 ContentBlock = Union[TextBlock, ToolUseBlock, ToolResultBlock]
 
 _counter = 0
+
+
 class Msg:
     """
     消息类
@@ -60,6 +62,7 @@ class Msg:
 
         self.id = _counter
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.metadata = metadata
 
     def get_text_content(self, separator: str = '\n') -> str | None:
         """
@@ -92,3 +95,33 @@ class Msg:
             blocks = [b for b in blocks if b.get("type") == block_type]
 
         return blocks
+
+    def to_dict(self) -> dict:
+        """
+        将Msg序列化
+        :return:
+        """
+        return {
+            "id": self.id,
+            "name": self.name,
+            "content": self.content,
+            "role": self.role,
+            "timestamp": self.timestamp,
+            "metadata": self.metadata,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Msg":
+        """
+        从data加载消息对象
+        :param data:
+        :return:
+        """
+        msg = object.__new__(cls)
+        msg.id = data["id"]
+        msg.name = data["name"]
+        msg.content = data["content"]
+        msg.role = data["role"]
+        msg.timestamp = data["timestamp"]
+        msg.metadata = data.get("metadata")
+        return msg
