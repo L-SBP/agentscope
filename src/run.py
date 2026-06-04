@@ -2,13 +2,17 @@ import asyncio
 import os
 import sys
 
-from src.memory import FileMemory
+from dotenv import load_dotenv
 
 _SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.dirname(_SRC_DIR)
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 os.chdir(_SRC_DIR)
+
+load_dotenv(os.path.join(_SRC_DIR, ".env"))
+
+from src.memory import FileMemory
 
 from src.formatter import OpenAIFormatter
 from src.llm import OpenAIChatModel

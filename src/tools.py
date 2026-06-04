@@ -1,7 +1,7 @@
 import inspect
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable, Any
+from typing import Callable, Any, Literal
 from docstring_parser import parse
 from pydantic import Field, create_model
 
@@ -240,3 +240,158 @@ def calculator(expression: str) -> str:
         return str(result)
     except Exception as e:
         return f"Error: {e}"
+
+@tool
+def search_web(
+    query: str,
+    search_type: Literal["auto", "instant", "fast", "deep"] = "auto",
+    category: str = "",
+    max_results: int = 5,
+    include_full_text: bool = False,
+) -> str:
+    """
+    使用 Exa AI 搜索引擎搜索网络，支持多种搜索模式和内容分类筛选
+    :param query: 搜索关键词或问题
+    :param search_type: 搜索类型，默认 auto。auto=自动选择最佳模式, instant=最快(180ms), fast=低延迟, deep=深度研究(适合复杂问题)
+    :param category: 内容分类筛选。可选: research paper(论文), news(新闻), company(公司), personal site(个人网站), financial report(财报), people(人物)。留空则不筛选
+    :param max_results: 返回结果数量，默认 5
+    :param include_full_text: 是否包含网页全文。默认 False 仅返回 AI 提取的关键摘要，设 True 可获得更详细内容但消耗更多 token
+    :return: 搜索结果摘要
+    """
+    try:
+        from exa_py import Exa
+        import os
+
+        search_api = os.getenv("EXA_SEARCH_API")
+        if not search_api:
+            return "Error: 未设置 SEARCH_API_KEY 环境变量"
+
+        exa = Exa(api_key=search_api)
+
+        contents: dict = {"highlights": True}
+        if include_full_text:
+            contents["text"] = {"maxCharacters": 3000}
+
+        kwargs: dict = {
+            "query": query,
+            "type": search_type,
+            "num_results": max_results,
+            "system_prompt": "Prefer official sources and recent information, avoid duplicate results",
+            "contents": contents,
+        }
+        if category:
+            kwargs["category"] = category
+
+        results = exa.search(**kwargs)
+
+        formatted_results = []
+        for i, item in enumerate(results.results, 1):
+            title = item.title or "无标题"
+            url = item.url or "无链接"
+            text = item.text or ""
+            highlights = item.highlights or []
+
+            if highlights:
+                snippet = " | ".join(h[:300] for h in highlights[:3])
+            elif text:
+                snippet = text[:800] + "..." if len(text) > 800 else text
+            else:
+                snippet = "(无摘要)"
+
+            formatted_results.append(
+                f"{i}. {title}\n   URL: {url}\n   摘要: {snippet}\n"
+            )
+
+        return "\n".join(formatted_results) if formatted_results else "未找到相关结果"
+
+    except ImportError:
+        return "Error: 未安装 exa-py 库，请运行 pip install exa-py"
+    except Exception as e:
+        return f"Error: 搜索失败 - {str(e)}"
+
+@tool
+def read_file(
+    file_path: str,
+    offset: int = 0,
+    limit: int = 2000,
+) -> str:
+    """读取文件内容，支持指定行偏移和行数限制
+    :param file_path: 要读取的文件路径（支持相对路径和绝对路径）
+    :param offset: 起始行号（0表示从第一行开始）
+    :param limit: 最大读取行数，默认2000行
+    :return: 文件内容
+    """
+    import os
+
+    full_path = os.path.abspath(file_path)
+
+    if not os.path.exists(full_path):
+        return f"Error: 文件不存在: {file_path}"
+
+    if os.path.isdir(full_path):
+        return f"Error: 路径为目录，非文件: {file_path}"
+
+    try:
+        with open(full_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except UnicodeDecodeError:
+        with open(full_path, "r", encoding="gbk", errors="replace") as f:
+            lines = f.readlines()
+    except PermissionError:
+        return f"Error: 没有权限读取文件: {file_path}"
+
+    total = len(lines)
+    if offset >= total:
+        return f"Error: 偏移 {offset} 超出文件总行数 {total}"
+
+    sliced = lines[offset:offset + limit]
+
+    output = []
+    for i, line in enumerate(sliced, start=offset + 1):
+        output.append(f"{i}: {line.rstrip()}")
+
+    result = "\n".join(output)
+    if offset + limit < total:
+        result += f"\n\n... (已截断，第 {offset + limit + 1} 行及之后未显示，共 {total} 行)"
+
+    return result
+
+@tool
+def write_file(
+    file_path: str,
+    content: str,
+    overwrite: bool = True,
+) -> str:
+    """将内容写入文件，默认覆盖已有文件
+    :param file_path: 要写入的文件路径（支持相对路径和绝对路径）
+    :param content: 要写入的文本内容
+    :param overwrite: 是否覆盖已有文件，默认True。设为False时文件已存在则返回错误
+    :return: 写入结果
+    """
+    import os
+
+    full_path = os.path.abspath(file_path)
+
+    if not overwrite and os.path.exists(full_path):
+        return f"Error: 文件已存在，不允许覆盖: {file_path}"
+
+    parent_dir = os.path.dirname(full_path)
+    if parent_dir:
+        try:
+            os.makedirs(parent_dir, exist_ok=True)
+        except PermissionError:
+            return f"Error: 没有权限创建目录: {parent_dir}"
+
+    try:
+        with open(full_path, "w", encoding="utf-8") as f:
+            f.write(content)
+    except PermissionError:
+        return f"Error: 没有权限写入文件: {file_path}"
+    except Exception as e:
+        return f"Error: 写入失败 - {e}"
+
+    line_count = content.count("\n") + 1
+    char_count = len(content)
+    return f"成功写入文件: {full_path} ({line_count} 行, {char_count} 字符)"
+
+
