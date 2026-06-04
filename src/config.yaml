@@ -7,3 +7,16 @@ LLM_Config:
     thinking:
       type: "enabled"
     reasoning_effort: "max"
+
+  Kimi:
+    base_config:
+      model: "kimi-k2.6"
+      base_url: "https://api.moonshot.cn/v1"
+    stream: True
+    thinking:
+      type: "enabled"
+
+  Doubao:
+    base_config:
+      model: "doubao-seed-2-0-lite-260215"
+      base_url: "https://ark.cn-beijing.volces.com/api/v3"

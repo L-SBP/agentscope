@@ -105,6 +105,7 @@ class ReActAgent(AgentBase):
         toolkit: Toolkit| None = None,
         memory: MemoryBase | None = None,
         max_iters: int = 10,
+        verbose: bool = True,
     ) -> None:
         """
         初始化 ReAct 智能体
@@ -115,6 +116,7 @@ class ReActAgent(AgentBase):
         :param toolkit: 工具集
         :param memory: 记忆模块
         :param max_iters: 最大推理
+        :param verbose: 是否打印详细日志。作为 Orchestrator 的 Worker 时建议设为 False
         """
         super().__init__(name)
         self.sys_prompt = sys_prompt
@@ -123,6 +125,7 @@ class ReActAgent(AgentBase):
         self.toolkit = toolkit or Toolkit()
         self.memory = memory or InMemoryMemory()
         self.max_iters = max_iters
+        self.verbose = verbose
 
     async def reply(
         self,
@@ -306,6 +309,8 @@ class ReActAgent(AgentBase):
 
     def _print_llm_request(self, messages: list[dict], tools: list[dict] | None) -> None:
         """打印 LLM 请求日志"""
+        if not self.verbose:
+            return
         import os
 
         # 检查是否启用详细日志
@@ -347,12 +352,14 @@ class ReActAgent(AgentBase):
 
     def _print_tool_call(self, tool_call: ToolUseBlock) -> None:
         """打印工具调用日志"""
+        if not self.verbose:
+            return
         import json
         import os
 
-        verbose = os.environ.get("NANO_AGENTSCOPE_VERBOSE", "0") == "1"
+        env_verbose = os.environ.get("NANO_AGENTSCOPE_VERBOSE", "0") == "1"
 
-        if verbose:
+        if env_verbose:
             print(f"\n🔧 [调用工具] {tool_call['name']}")
             print(f"  参数: {json.dumps(tool_call.get('args', {}), ensure_ascii=False, indent=2)}")
         else:
@@ -364,6 +371,8 @@ class ReActAgent(AgentBase):
 
     def _print_token_usage(self, usage: ChatUsage) -> None:
         """打印 Token 使用统计"""
+        if not self.verbose:
+            return
         import os
 
         verbose = os.environ.get("NANO_AGENTSCOPE_VERBOSE", "0") == "1"
@@ -386,6 +395,8 @@ class ReActAgent(AgentBase):
 
     def _print_response(self, msg: Msg) -> None:
         """打印响应消息"""
+        if not self.verbose:
+            return
         text = msg.get_text_content()
         if text:
             print(f"{msg.name}: {text}")
@@ -399,11 +410,9 @@ class ReActAgent(AgentBase):
             tool_call: ToolUseBlock,
             result: ToolResponse,
     ) -> None:
-        """打印工具执行结果
-
-        可以通过设置环境变量 NANO_AGENTSCOPE_LOG_MAX_LENGTH 来控制日志长度
-        设置为 0 表示不截断
-        """
+        """打印工具执行结果"""
+        if not self.verbose:
+            return
         import os
 
         text = ""
@@ -426,3 +435,9 @@ class ReActAgent(AgentBase):
         else:
             # 不截断或文本长度在限制内
             print(f"  [工具结果] {tool_call['name']}: {text}")
+
+
+class OrchestratorAgent(AgentBase):
+    """
+    OrchestratorAgent 是一个代理，用于管理多个代理，并执行任务。
+    """
