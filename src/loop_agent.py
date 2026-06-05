@@ -185,14 +185,26 @@ class ReActAgent(AgentBase):
         # 处理响应
         if isinstance(response, AsyncGenerator):
             final_response = None
-            async for chunk in response:
-                final_response = chunk
+            try:
+                async for chunk in response:
+                    final_response = chunk
+            except Exception as e:
+                import traceback
+                err_msg = Msg(
+                    name=self.name,
+                    content=f"[流式响应异常] {e}",
+                    role="assistant",
+                )
+                if self.verbose:
+                    traceback.print_exc()
+                return err_msg
             response = final_response
 
         response_msg = Msg(
             name=self.name,
             content=list(response.content) if response else [],
             role="assistant",
+            reasoning_content=response.reasoning_content if response else None,
         )
         await self.memory.add(response_msg)
 
@@ -270,6 +282,7 @@ class ReActAgent(AgentBase):
             name=self.name,
             content=list(response.content) if response else [],
             role="assistant",
+            reasoning_content=response.reasoning_content if response else None,
         )
 
         await self.memory.add(response_msg)

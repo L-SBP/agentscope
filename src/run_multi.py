@@ -58,7 +58,11 @@ async def main() -> None:
 
     search_worker = ReActAgent(
         name="搜索分析师",
-        sys_prompt=(...),
+        sys_prompt=(
+            "你是搜索分析师，擅长网络搜索和信息检索。\n"
+            "收到任务后，用搜索工具查找信息，用文件工具读取资料，整理后返回。\n"
+            "每次只调用一个工具。不需要工具时直接返回检索和分析结果。"
+        ),
         model=_make_model(search_worker_model),
         formatter=formatter,
         toolkit=search_toolkit,
@@ -81,7 +85,11 @@ async def main() -> None:
 
     code_worker = ReActAgent(
         name="代码执行者",
-        sys_prompt=(...),
+        sys_prompt=(
+            "你是代码执行者，擅长数学计算、文件读写和数据处理。\n"
+            "收到任务后，用计算器做运算，用文件工具读写数据。\n"
+            "每次只调用一个工具。完成后返回执行结果。"
+        ),
         model=_make_model(code_worker_model),
         formatter=formatter,
         toolkit=code_toolkit,

@@ -27,6 +27,8 @@ class ChatResponse:
     """
     content: list[ContentBlock]
     usage: ChatUsage | None = None
+    reasoning_content: str | None = None
+    """推理/思考内容（Kimi k2.x / DeepSeek 等模型的 reasoning_content 字段）"""
 
 class ChatModelBase:
     """
@@ -146,6 +148,7 @@ class OpenAIChatModel(ChatModelBase):
         :return:
         """
         content_blocks = []
+        reasoning_content: str | None = None
 
         if response.choices:
             choice = response.choices[0]
@@ -154,6 +157,12 @@ class OpenAIChatModel(ChatModelBase):
                 content_blocks.append(
                     TextBlock(type="text", text=choice.message.content)
                 )
+
+            # Kimi k2.x / DeepSeek 推理内容（非标准 OpenAI SDK 字段）
+            if hasattr(choice.message, "reasoning_content"):
+                reasoning_content = getattr(
+                    choice.message, "reasoning_content"
+                ) or None
 
             for tool_call in choice.message.tool_calls or []:
                 content_blocks.append(
@@ -174,6 +183,7 @@ class OpenAIChatModel(ChatModelBase):
         return ChatResponse(
             content=content_blocks,
             usage=usage,
+            reasoning_content=reasoning_content,
         )
 
     async def _parse_stream_response(
@@ -189,6 +199,7 @@ class OpenAIChatModel(ChatModelBase):
         """
         usage = None
         text = ""
+        reasoning_content = ""
         tool_calls: dict[int, dict] = {}
         async for chunk in response:
             if chunk.usage:
@@ -200,7 +211,9 @@ class OpenAIChatModel(ChatModelBase):
 
             if not chunk.choices:
                 if usage:
-                    yield self._build_stream_response(text, tool_calls, usage)
+                    yield self._build_stream_response(
+                        text, tool_calls, usage, reasoning_content
+                    )
                 continue
 
             choice = chunk.choices[0]
@@ -208,6 +221,12 @@ class OpenAIChatModel(ChatModelBase):
 
             if delta.content:
                 text += delta.content
+
+            # Kimi k2.x / DeepSeek 推理内容（非标准 OpenAI SDK 字段）
+            if hasattr(delta, "reasoning_content"):
+                rc = getattr(delta, "reasoning_content")
+                if rc:
+                    reasoning_content += rc
 
             if delta.tool_calls:
                 for tool_call_delta in delta.tool_calls:
@@ -225,7 +244,9 @@ class OpenAIChatModel(ChatModelBase):
                         if tool_call_delta.function.arguments:
                             tool_calls[idx]["args"] += tool_call_delta.function.arguments
 
-            yield self._build_stream_response(text, tool_calls, usage)
+            yield self._build_stream_response(
+                text, tool_calls, usage, reasoning_content
+            )
 
 
     def _build_stream_response(
@@ -233,6 +254,7 @@ class OpenAIChatModel(ChatModelBase):
         text: str,
         tool_calls: dict[int, dict],
         usage: ChatUsage | None = None,
+        reasoning_content: str = "",
     ) -> ChatResponse:
         """
         构建流式响应的 ChatResponse
@@ -240,6 +262,7 @@ class OpenAIChatModel(ChatModelBase):
         :param text:
         :param tool_calls:
         :param usage:
+        :param reasoning_content: 推理/思考内容
         :return:
         """
         content_blocks = []
@@ -266,4 +289,5 @@ class OpenAIChatModel(ChatModelBase):
         return ChatResponse(
             content=content_blocks,
             usage=usage,
+            reasoning_content=reasoning_content if reasoning_content else None,
         )

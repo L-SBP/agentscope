@@ -45,6 +45,7 @@ class Msg:
         role: Literal["user", "system", "assistant"],
         metadata: dict | None = None,
         timestamp: str | None = None,
+        reasoning_content: str | None = None,
     ) -> None:
         """
         初始化消息对象
@@ -63,6 +64,7 @@ class Msg:
         self.id = _counter
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.metadata = metadata
+        self.reasoning_content = reasoning_content
 
     def get_text_content(self, separator: str = '\n') -> str | None:
         """
@@ -108,6 +110,7 @@ class Msg:
             "role": self.role,
             "timestamp": self.timestamp,
             "metadata": self.metadata,
+            "reasoning_content": self.reasoning_content,
         }
 
     @classmethod
@@ -124,4 +127,5 @@ class Msg:
         msg.role = data["role"]
         msg.timestamp = data["timestamp"]
         msg.metadata = data.get("metadata")
+        msg.reasoning_content = data.get("reasoning_content")
         return msg

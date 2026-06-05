@@ -106,6 +106,10 @@ class OpenAIFormatter(FormatterBase):
                 if tool_calls:
                     openai_msg["tool_calls"] = tool_calls
 
+                # 回传推理/思考内容（Kimi k2.x / DeepSeek 等需要 reasoning_content）
+                if msg.reasoning_content is not None:
+                    openai_msg["reasoning_content"] = msg.reasoning_content
+
                 formatted_msgs.append(openai_msg)
 
         return formatted_msgs

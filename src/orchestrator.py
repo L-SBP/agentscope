@@ -370,6 +370,7 @@ class OrchestratorAgent(AgentBase):
         stream: AsyncGenerator,
     ) -> ChatResponse | None:
         final_text = ""
+        reasoning_content = ""
         tool_calls: dict[str, dict] = {}
         usage = None
 
@@ -382,6 +383,8 @@ class OrchestratorAgent(AgentBase):
                         final_text = block.get("text", "")
                     elif block.get("type") == "tool_use":
                         tool_calls[block["id"]] = block
+                if chunk.reasoning_content:
+                    reasoning_content = chunk.reasoning_content
         except Exception:
             pass
 
@@ -391,7 +394,11 @@ class OrchestratorAgent(AgentBase):
         for tc in tool_calls.values():
             content_blocks.append(tc)
 
-        return ChatResponse(content=content_blocks, usage=usage)
+        return ChatResponse(
+            content=content_blocks,
+            usage=usage,
+            reasoning_content=reasoning_content or None,
+        )
 
     async def observe(self, msg: Msg | list[Msg] | None = None) -> None:
         await self.memory.add(msg)
